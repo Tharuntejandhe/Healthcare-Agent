@@ -1,3 +1,4 @@
+import logging
 from typing import Generator, Tuple
 
 from fastapi import Depends, HTTPException, status
@@ -12,6 +13,8 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.user import User
 from app.schemas.token import TokenPayload
+
+logger = logging.getLogger("app.api.deps")
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -38,8 +41,12 @@ def _resolve_user(db: Session, token: str) -> Tuple[User, TokenPayload]:
         # Clerk JWT uses 'sub' for the user ID
         sub = payload.get("sub")
         if not sub:
+            logger.error("JWT decoded but 'sub' claim is missing. Payload keys: %s", list(payload.keys()))
             raise _CREDENTIALS_ERROR
-    except Exception:
+    except _CREDENTIALS_ERROR.__class__:
+        raise
+    except Exception as e:
+        logger.error("JWT verification failed: %s: %s", type(e).__name__, e)
         raise _CREDENTIALS_ERROR
 
     # Look up user by clerk_id (stored in google_sub column)
