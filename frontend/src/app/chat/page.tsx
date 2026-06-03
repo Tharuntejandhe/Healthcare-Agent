@@ -42,18 +42,19 @@ interface Message {
   imageUrls?: string[];
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: Message[];
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'init-1',
-      role: 'ai',
-      content: 'Hello! I am your Healthcare AI Assistant. How can I help you today?',
-      agentName: 'Support Router'
-    }
-  ]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,11 +62,86 @@ export default function ChatPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [usePersonalAnalysis, setUsePersonalAnalysis] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
+  const messages = activeSessionId 
+    ? sessions.find(s => s.id === activeSessionId)?.messages || []
+    : [];
+
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
+    setSessions(prevSessions => {
+      let currentSession = prevSessions.find(s => s.id === activeSessionId);
+      const currentMessages = currentSession?.messages || [];
+      const newMessages = typeof updater === 'function' ? updater(currentMessages) : updater;
+
+      if (!currentSession) return prevSessions; // Should not happen with activeSessionId
+
+      let title = currentSession.title;
+      if (title === 'New Consultation') {
+        const firstUserMsg = newMessages.find(m => m.role === 'user');
+        if (firstUserMsg && firstUserMsg.content.trim()) {
+          title = firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '');
+        } else if (firstUserMsg && firstUserMsg.imageUrls && firstUserMsg.imageUrls.length > 0) {
+          title = 'Image Analysis';
+        }
+      }
+
+      const updatedSession = {
+        ...currentSession,
+        updatedAt: Date.now(),
+        messages: newMessages,
+        title
+      };
+
+      return [updatedSession, ...prevSessions.filter(s => s.id !== activeSessionId)];
+    });
+  };
+
+  const startNewSession = () => {
+    const newId = Date.now().toString();
+    setActiveSessionId(newId);
+    setSessions(prev => [
+      {
+        id: newId,
+        title: 'New Consultation',
+        updatedAt: Date.now(),
+        messages: [{
+          id: 'init-1',
+          role: 'ai',
+          content: 'Hello! I am your Healthcare AI Assistant. How can I help you today?',
+          agentName: 'Support Router'
+        }]
+      },
+      ...prev
+    ]);
+  };
+
   useEffect(() => {
+    const saved = localStorage.getItem('medihealth_chat_sessions');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSessions(parsed);
+        if (parsed.length > 0) {
+          setActiveSessionId(parsed[0].id);
+        } else {
+          startNewSession();
+        }
+      } catch {
+        startNewSession();
+      }
+    } else {
+      startNewSession();
+    }
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('medihealth_chat_sessions', JSON.stringify(sessions));
+    }
+  }, [sessions, isMounted]);
 
   useEffect(() => {
     if (isMounted && isLoaded && !isSignedIn) {
@@ -104,6 +180,31 @@ export default function ChatPage() {
     utterance.onerror = () => setIsSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+      if (files.length > 0) {
+        setSelectedImages(prev => [...prev, ...files]);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,16 +300,7 @@ export default function ChatPage() {
             <Button
               variant="primary"
               fullWidth
-              onClick={() =>
-                setMessages([
-                  {
-                    id: 'init',
-                    role: 'ai',
-                    content: 'How can I assist you with your health data today?',
-                    agentName: 'Support Router',
-                  },
-                ])
-              }
+              onClick={startNewSession}
             >
               <Plus size={18} />
               New consultation
@@ -216,11 +308,25 @@ export default function ChatPage() {
           </div>
 
           <div className={styles.historyList}>
-            {/* Recent consultations will appear here */}
-            <div className={styles.emptyHistory}>
-              <span><MessagesSquare size={22} /></span>
-              <p>Your past consultations will appear here.</p>
-            </div>
+            {sessions.length === 0 ? (
+              <div className={styles.emptyHistory}>
+                <span><MessagesSquare size={22} /></span>
+                <p>Your past consultations will appear here.</p>
+              </div>
+            ) : (
+              sessions.map(session => (
+                <button
+                  key={session.id}
+                  className={`${styles.historyItem} ${session.id === activeSessionId ? styles.historyItemActive : ''}`}
+                  onClick={() => setActiveSessionId(session.id)}
+                >
+                  <span className={styles.historyItemTitle}>{session.title}</span>
+                  <span className={styles.historyItemTime}>
+                    {new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
 
           <div className={styles.sidebarFooter}>
@@ -233,8 +339,29 @@ export default function ChatPage() {
         </div>
       </aside>
 
-      <main className={styles.mainChat}>
+      <main 
+        className={styles.mainChat}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <div className={styles.mainInner}>
+          <AnimatePresence>
+            {isDragging && (
+              <motion.div 
+                className={styles.dragOverlay}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className={styles.dragOverlayInner}>
+                  <Camera size={48} />
+                  <h3>Drop images here</h3>
+                  <p>They will be added to your message</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <header className={styles.header}>
             <div className={styles.headerInfo}>
               <span className={styles.headerMark}>

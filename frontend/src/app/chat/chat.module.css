@@ -87,6 +87,51 @@
   line-height: 1.5;
 }
 
+.historyItem {
+  display: flex;
+  flex-direction: column;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-lg);
+  background: var(--input);
+  box-shadow: var(--shadow-clay-inset);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  border: none;
+  outline: none;
+  text-align: left;
+  gap: 0.35rem;
+  font-family: inherit;
+  width: 100%;
+}
+
+.historyItem:hover {
+  background: var(--card);
+  box-shadow: var(--shadow-clay-sm);
+  transform: translateY(-2px);
+}
+
+.historyItemActive {
+  background: var(--card);
+  box-shadow: var(--shadow-clay);
+  border: 1px solid hsla(var(--primary-hue), 80%, 60%, 0.15);
+}
+
+.historyItemTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.historyItemTime {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
 .sidebarFooter {
   padding: 1rem 1.2rem;
   display: flex;
@@ -510,4 +555,35 @@
   .sidebar { display: none; }
   .mainChat { padding: 0.7rem; }
   .messageWrapper { max-width: 94%; }
+}
+
+/* ---------- Drag & Drop Overlay ---------- */
+.dragOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: hsla(var(--background-hue, 0), 0%, 0%, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xl);
+}
+
+.dragOverlayInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem;
+  background: var(--card);
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-clay);
+  color: var(--primary);
+}
+
+.dragOverlayInner h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
 }
