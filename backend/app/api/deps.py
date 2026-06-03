@@ -35,30 +35,31 @@ def get_db() -> Generator:
 def _resolve_user(db: Session, token: str) -> Tuple[User, TokenPayload]:
     try:
         payload = security.decode_access_token(token)
-        token_data = TokenPayload(**payload)
-    except (JWTError, ValidationError):
+        # Clerk JWT uses 'sub' for the user ID
+        sub = payload.get("sub")
+        if not sub:
+            raise _CREDENTIALS_ERROR
+    except Exception:
         raise _CREDENTIALS_ERROR
 
-    if token_data.sub is None:
-        raise _CREDENTIALS_ERROR
-
-    # Individually revoked (logout) — checked first; cheap primary-key lookup.
-    if token_data.jti and crud.crud_token.is_revoked(db, jti=token_data.jti):
-        raise _CREDENTIALS_ERROR
-
-    user = crud.crud_user.get(db, id=int(token_data.sub))
+    # Look up user by clerk_id (stored in google_sub column)
+    user = crud.crud_user.get_by_google_sub(db, google_sub=sub)
     if not user:
-        # A validly-signed token for a user that no longer exists is an auth
-        # failure, not a 404 (which would leak account existence).
-        raise _CREDENTIALS_ERROR
-
-    # Globally invalidated (password change / logout-everywhere / compromise).
-    if (token_data.ver or 0) != (user.token_version or 0):
-        raise _CREDENTIALS_ERROR
+        # Auto-provision user on first valid Clerk token
+        user = crud.crud_user.create_google_user(
+            db=db,
+            email=f"{sub}@clerk.local",
+            full_name="Patient",
+            google_sub=sub,
+        )
+        user.auth_provider = "clerk"
+        db.commit()
 
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
 
+    # Create dummy token payload since we don't need jti/ver anymore
+    token_data = TokenPayload(sub=str(user.id))
     return user, token_data
 
 

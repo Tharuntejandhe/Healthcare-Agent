@@ -29,7 +29,7 @@ import { Reveal, Stagger, StaggerItem } from '@/components/ui/Reveal';
 import { AppShell } from '@/components/layout/AppShell';
 import { springClay } from '@/lib/motion';
 import { API_BASE_URL } from '@/lib/api';
-import { logout } from '@/lib/auth';
+import { useAuth, useUser } from '@clerk/nextjs';
 import styles from './profile.module.css';
 
 interface UserProfile {
@@ -49,6 +49,8 @@ type ProfileField = keyof UserProfile;
 
 export default function Profile() {
   const router = useRouter();
+  const { getToken, signOut, isLoaded, isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [editForm, setEditForm] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,12 +59,14 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      if (!isLoaded) return;
+      if (!isSignedIn) {
+        router.push('/login');
+        return;
+      }
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
+        const token = await getToken();
+        if (!token) return;
 
         const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
           headers: {
@@ -76,8 +80,8 @@ export default function Profile() {
 
         const data = await res.json();
         const userData = {
-          full_name: data.full_name || 'Medical Patient',
-          email: data.email,
+          full_name: data.full_name || clerkUser?.fullName || 'Medical Patient',
+          email: data.email || clerkUser?.primaryEmailAddress?.emailAddress,
           mobile: data.mobile || '+1 (555) 012-3456',
           blood_group: data.blood_group || 'O Positive',
           dob: data.dob || '1990-01-01',
@@ -91,18 +95,16 @@ export default function Profile() {
         setEditForm(userData);
       } catch (error) {
         console.error(error);
-        localStorage.removeItem('access_token');
-        router.push('/login');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUser();
-  }, [router]);
+  }, [router, isLoaded, isSignedIn, getToken, clerkUser]);
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     router.push('/login');
   };
 

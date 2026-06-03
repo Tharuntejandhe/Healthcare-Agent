@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs';
 import {
   Sparkles,
   Stethoscope,
@@ -62,12 +63,18 @@ export default function Home() {
         <div className={`${styles.container} ${styles.navInner}`}>
           <Logo size="md" />
           <div className={styles.navLinks}>
-            <Link href="/login" className={styles.navLogin}>
-              Sign in
-            </Link>
-            <Button as={Link} href="/signup" size="small" pill>
-              Get started
-            </Button>
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button className={styles.navLogin}>Sign in</button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="small" pill>Get started</Button>
+              </SignUpButton>
+            </Show>
+            <Show when="signed-in">
+              <Button as={Link} href="/dashboard" size="small" pill>Dashboard</Button>
+              <UserButton />
+            </Show>
             <ThemeToggle />
           </div>
         </div>
@@ -93,7 +100,7 @@ export default function Home() {
         </Reveal>
         <Reveal inView={false} delay={0.18}>
           <div className={styles.ctas}>
-            <Button as={Link} href="/signup" size="large" pill>
+            <Button as={Link} href="/sign-up" size="large" pill>
               Start free
             </Button>
             <Button as={Link} href="/chat" variant="secondary" size="large" pill>
@@ -180,7 +187,7 @@ export default function Home() {
           <div className={styles.ctaBand}>
             <h2>Ready to meet your care companion?</h2>
             <p>Create an account in seconds and start a conversation with your own health data.</p>
-            <Button as={Link} href="/signup" variant="secondary" size="large" pill>
+            <Button as={Link} href="/sign-up" variant="secondary" size="large" pill>
               <MessagesSquare size={18} /> Get started free
             </Button>
           </div>

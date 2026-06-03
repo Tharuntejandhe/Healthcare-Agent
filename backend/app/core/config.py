@@ -69,8 +69,8 @@ class Settings(BaseSettings):
     AZURE_STORAGE_CONNECTION_STRING: str = ""
     AZURE_CONTAINER_NAME: str = "patient-reports"
 
-    # --- Google OAuth ---
-    GOOGLE_CLIENT_ID: str = ""
+    # --- Clerk Auth ---
+    CLERK_JWKS_URL: str = ""
 
     # --- Logging ---
     LOG_LEVEL: str = "INFO"

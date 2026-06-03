@@ -8,47 +8,78 @@ from jose import jwt
 from app.core.config import settings
 
 
-def create_access_token(
-    subject: Union[str, Any],
-    *,
-    token_version: int = 0,
-    expires_delta: Optional[timedelta] = None,
-) -> str:
-    """Mint a signed JWT.
+import urllib.request
+import json
+from jose import jwt, jwk
+from fastapi import HTTPException, status
+from app.core.config import settings
 
-    Includes a unique `jti` (so the token can be revoked individually on logout)
-    and a `ver` claim mirroring the user's `token_version` (so every token for a
-    user can be invalidated at once by bumping that counter).
-    """
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
-    to_encode = {
-        "exp": expire,
-        "sub": str(subject),
-        "jti": uuid.uuid4().hex,
-        "ver": token_version,
-    }
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+import logging
 
+logger = logging.getLogger(__name__)
+
+# Cache the JWKS to avoid fetching on every request
+_jwks = None
+
+def get_jwks():
+    global _jwks
+    if _jwks:
+        return _jwks
+    jwks_url = settings.CLERK_JWKS_URL
+    if not jwks_url:
+        raise ValueError("CLERK_JWKS_URL is not configured. Set it in backend/.env")
+    
+    logger.info(f"Fetching JWKS from {jwks_url}")
+    with urllib.request.urlopen(jwks_url) as response:
+        _jwks = json.loads(response.read().decode("utf-8"))
+    logger.info(f"JWKS loaded with {len(_jwks.get('keys', []))} keys")
+    return _jwks
 
 def decode_access_token(token: str) -> dict:
-    """Decode + verify a JWT, pinning the expected algorithm.
+    """Decode + verify a Clerk JWT using JWKS."""
+    try:
+        jwks = get_jwks()
+        unverified_header = jwt.get_unverified_header(token)
+        rsa_key = {}
+        for key in jwks["keys"]:
+            if key["kid"] == unverified_header["kid"]:
+                rsa_key = {
+                    "kty": key["kty"],
+                    "kid": key["kid"],
+                    "use": key["use"],
+                    "n": key["n"],
+                    "e": key["e"]
+                }
+                break
+        
+        if rsa_key:
+            payload = jwt.decode(
+                token,
+                rsa_key,
+                algorithms=["RS256"],
+                options={"verify_aud": False}
+            )
+            return payload
+        logger.error(f"No matching key found for kid={unverified_header.get('kid')}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unable to find appropriate key.",
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token verification failed: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token.")
 
-    Passing an explicit single-element `algorithms` list ensures python-jose
-    rejects `alg: none` and RS256→HS256 algorithm-confusion forgery attempts.
-    Raises jose.JWTError on any invalid/expired/tampered token.
-    """
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
+# ---------------------------------------------------------------------------
+# Password utilities — still used by crud_user for legacy/local accounts
+# ---------------------------------------------------------------------------
 
-def verify_password(plain_password: str, hashed_password: Optional[str]) -> bool:
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not hashed_password:
-        # Accounts created via Google have no password hash.
         return False
     return bcrypt.checkpw(
         plain_password.encode("utf-8"),
@@ -57,40 +88,8 @@ def verify_password(plain_password: str, hashed_password: Optional[str]) -> bool
 
 
 def get_password_hash(password: str) -> str:
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
-    return hashed.decode("utf-8")
+    return bcrypt.hashpw(
+        password.encode("utf-8"),
+        bcrypt.gensalt(),
+    ).decode("utf-8")
 
-
-def verify_google_id_token(id_token_str: str) -> dict:
-    """Verify a Google ID token and return the decoded claims.
-
-    Raises ValueError if the token is invalid, expired, or for the wrong client.
-    `google-auth` is imported lazily so the dependency is only required when
-    Google login is actually used.
-    """
-    if not settings.GOOGLE_CLIENT_ID:
-        raise ValueError("GOOGLE_CLIENT_ID is not configured on the server.")
-
-    try:
-        from google.auth.transport import requests as google_requests
-        from google.oauth2 import id_token as google_id_token
-    except ImportError as exc:  # pragma: no cover - install-time only
-        raise RuntimeError(
-            "google-auth is not installed. Add `google-auth>=2.28.0` to requirements.txt."
-        ) from exc
-
-    try:
-        claims = google_id_token.verify_oauth2_token(
-            id_token_str,
-            google_requests.Request(),
-            settings.GOOGLE_CLIENT_ID,
-        )
-    except ValueError as exc:
-        raise ValueError(f"Invalid Google ID token: {exc}") from exc
-
-    if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
-        raise ValueError("Google ID token has an unexpected issuer.")
-    if not claims.get("email_verified"):
-        raise ValueError("Google account email is not verified.")
-    return claims

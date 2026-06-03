@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/Toaster";
@@ -58,15 +59,17 @@ export default function RootLayout({
     // suppressHydrationWarning: themeScript adds the `dark` class to <html>
     // before hydration to avoid a flash of the wrong palette, so the html
     // attributes intentionally differ from the server render.
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
-      <body>
-        <div className="mesh-bg" aria-hidden="true" />
-        <MotionProvider>{children}</MotionProvider>
-        <Toaster />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
+        <body>
+          <div className="mesh-bg" aria-hidden="true" />
+          <MotionProvider>{children}</MotionProvider>
+          <Toaster />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

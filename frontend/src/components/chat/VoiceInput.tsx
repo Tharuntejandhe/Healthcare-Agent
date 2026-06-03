@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { transcribeAudio } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
 import { springClay } from '@/lib/motion';
+import { useAuth } from '@clerk/nextjs';
 import styles from './VoiceInput.module.css';
 
 interface VoiceInputProps {
@@ -20,6 +21,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   onRecordingStateChange,
   isLoading: parentLoading
 }) => {
+  const { getToken } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -76,7 +78,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token') || '';
+      const token = await getToken() || '';
       const result = await transcribeAudio(blob, token);
       const text = (result.transcript || '').trim();
       // Whisper returns "." / "" for silence — don't dump that into the input.

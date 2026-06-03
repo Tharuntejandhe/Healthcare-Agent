@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { getToken, logout } from '@/lib/auth';
+import { useAuth } from '@clerk/nextjs';
 
 /**
  * Automatic logoff after a period of inactivity.
@@ -14,21 +14,22 @@ import { getToken, logout } from '@/lib/auth';
  */
 export function IdleTimeout({ timeoutMs = 15 * 60 * 1000 }: { timeoutMs?: number }) {
   const router = useRouter();
+  const { signOut, isSignedIn } = useAuth();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const signOut = async () => {
-      if (!getToken()) return;
-      await logout();
+    const handleSignOut = async () => {
+      if (!isSignedIn) return;
+      await signOut();
       toast('Signed out', { description: 'You were logged out due to inactivity.' });
       router.push('/login');
     };
 
     const reset = () => {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(signOut, timeoutMs);
+      timer.current = setTimeout(handleSignOut, timeoutMs);
     };
 
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'visibilitychange'];

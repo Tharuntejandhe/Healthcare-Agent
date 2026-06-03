@@ -12,7 +12,7 @@ import {
   LogOut,
   type LucideIcon,
 } from 'lucide-react';
-import { logout } from '@/lib/auth';
+import { useAuth } from '@clerk/nextjs';
 import { cn } from '@/lib/cn';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -39,10 +39,11 @@ interface SidebarProps {
 export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+    await signOut();
+    router.push('/');
   };
 
   return (

@@ -19,9 +19,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Reveal } from '@/components/ui/Reveal';
 import { springClay } from '@/lib/motion';
 import { cn } from '@/lib/cn';
+import { useAuth } from '@clerk/nextjs';
 import styles from './InjuryAnalyzer.module.css';
 
 const InjuryAnalyzer: React.FC = () => {
+  const { getToken } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
@@ -59,8 +61,7 @@ const InjuryAnalyzer: React.FC = () => {
     setError(null);
 
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('access_token') || '';
+      const token = await getToken() || '';
       const result = await analyzeInjury(file, token);
       setAnalysis(result.analysis);
     } catch (err: any) {

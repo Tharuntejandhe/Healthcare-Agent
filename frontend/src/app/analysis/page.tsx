@@ -28,6 +28,7 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/Reveal';
 import { AppShell } from '@/components/layout/AppShell';
 import { API_BASE_URL } from '@/lib/api';
+import { useAuth } from '@clerk/nextjs';
 import styles from './analysis.module.css';
 
 interface LabParameter {
@@ -61,14 +62,17 @@ const CLAY = {
 const COLORS = [CLAY.success, CLAY.error, CLAY.warning]; // Normal, High, Low
 
 export default function AnalysisPage() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [data, setData] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReport = async () => {
+      if (!isLoaded || !isSignedIn) return;
       try {
-        const token = localStorage.getItem('access_token');
+        const token = await getToken();
+        if (!token) return;
         const res = await fetch(`${API_BASE_URL}/api/v1/documents/analytical-report`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -96,7 +100,7 @@ export default function AnalysisPage() {
     };
 
     fetchReport();
-  }, []);
+  }, [isLoaded, isSignedIn, getToken]);
 
   if (loading) {
     return (

@@ -24,6 +24,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { springClay } from '@/lib/motion';
 import { API_BASE_URL, listDocuments, type ApiDocument } from '@/lib/api';
 import { purgeLegacyPhi } from '@/lib/auth';
+import { useAuth, useUser } from '@clerk/nextjs';
 import styles from './dashboard.module.css';
 
 interface Report {
@@ -50,49 +51,43 @@ function toReport(doc: ApiDocument): Report {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [reports, setReports] = useState<Report[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [riskData, setRiskData] = useState<any>(null);
   const [isLoadingRisk, setIsLoadingRisk] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    // Scrub any PHI cached by older builds that stored reports in localStorage.
     purgeLegacyPhi();
 
     const fetchUserAndReports = async () => {
+      if (!isLoaded) return;
+      if (!isSignedIn) {
+        router.push('/login');
+        return;
+      }
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
-        const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Auth failed');
-
-        const userData = await res.json();
-        setUserEmail(userData.email);
+        const token = await getToken();
+        if (!token) return;
 
         // Reports come from the server (DB), never browser storage.
         const docs = await listDocuments(token);
         setReports(docs.map(toReport));
       } catch (e) {
-        console.error('Error fetching user or reports:', e);
-        router.push('/login');
+        console.error('Error fetching reports:', e);
       }
     };
 
     fetchUserAndReports();
     fetchRiskAssessment();
-  }, [router]);
+  }, [router, isLoaded, isSignedIn, getToken]);
 
   const fetchRiskAssessment = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       if (!token) return;
       setIsLoadingRisk(true);
       const res = await fetch(`${API_BASE_URL}/api/v1/risk/my-risk`, {
@@ -114,7 +109,7 @@ export default function Dashboard() {
         onClick: async () => {
           try {
             if (report.blobName) {
-              const token = localStorage.getItem('access_token');
+              const token = await getToken();
               const res = await fetch(`${API_BASE_URL}/api/v1/documents/${report.blobName}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
@@ -148,7 +143,7 @@ export default function Dashboard() {
     formData.append('file', file);
 
     const uploadPromise = (async () => {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -198,7 +193,7 @@ export default function Dashboard() {
       return;
     }
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const res = await fetch(`${API_BASE_URL}${report.url}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -234,7 +229,7 @@ export default function Dashboard() {
       <Reveal inView={false} className={styles.header}>
         <div className={styles.welcome}>
           <h1>Patient Dashboard</h1>
-          <p>Welcome back, {userEmail?.split('@')[0] || 'Member'}</p>
+          <p>Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0] || 'Member'}</p>
         </div>
         <input
           type="file"

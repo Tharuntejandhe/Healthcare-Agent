@@ -28,6 +28,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Logo } from '@/components/ui/Logo';
 import { API_BASE_URL, analyzeImage, extractErrorMessage } from '@/lib/api';
 import { bubbleIn, springClay } from '@/lib/motion';
+import { useAuth } from '@clerk/nextjs';
 import { PhotoUpload } from '@/components/chat/PhotoUpload';
 import { VoiceInput } from '@/components/chat/VoiceInput';
 import { CameraCapture } from '@/components/chat/CameraCapture';
@@ -43,6 +44,7 @@ interface Message {
 
 export default function ChatPage() {
   const router = useRouter();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -66,13 +68,10 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    if (isMounted) {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        router.push('/login');
-      }
+    if (isMounted && isLoaded && !isSignedIn) {
+      router.push('/login');
     }
-  }, [isMounted, router]);
+  }, [isMounted, isLoaded, isSignedIn, router]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -127,7 +126,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('access_token') || '';
+      const token = await getToken() || '';
 
       let finalQuery = userMsg.content;
 
