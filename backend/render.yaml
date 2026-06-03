@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: medihealth-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./start.sh
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: STORAGE_BACKEND
+        value: postgres
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CLERK_JWKS_URL
+        sync: false
+      # Required for uvicorn/gunicorn
+      - key: PORT
+        value: "8000"
+      - key: WEB_CONCURRENCY
+        value: "2"

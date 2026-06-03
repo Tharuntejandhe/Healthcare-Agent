@@ -115,17 +115,9 @@ async def upload_document(
         )
         raise HTTPException(status_code=502, detail="Could not store the uploaded document.")
 
-    # Indexing is heavy + synchronous (parse/OCR + FAISS); keep it off the event loop.
     filename = file.filename or ("report.pdf" if kind == "pdf" else "report.jpg")
-    try:
-        if kind == "pdf":
-            chunks_indexed = await run_in_threadpool(process_and_index_document, content, filename, current_user.id)
-        else:
-            chunks_indexed = await run_in_threadpool(index_document_text, ocr_text, filename, current_user.id)
-    except Exception:
-        logger.exception("indexing failure during upload (user=%s)", current_user.id)
-        chunks_indexed = 0  # the file is stored; indexing can be retried later
-
+    
+    # Create the metadata row FIRST so we have a document_id for pgvector
     doc = crud.crud_document.create(
         db,
         user_id=current_user.id,
@@ -133,8 +125,23 @@ async def upload_document(
         blob_name=blob_name,
         content_type=ctype,
         size_bytes=len(content),
-        chunks_indexed=chunks_indexed,
+        chunks_indexed=0,
     )
+    
+    # Indexing is heavy + synchronous (parse/OCR + embedding); keep it off the event loop.
+    try:
+        if kind == "pdf":
+            chunks_indexed = await run_in_threadpool(process_and_index_document, content, filename, current_user.id, doc.id)
+        else:
+            chunks_indexed = await run_in_threadpool(index_document_text, ocr_text, filename, current_user.id, doc.id)
+            
+        if chunks_indexed > 0:
+            doc.chunks_indexed = chunks_indexed
+            db.commit()
+    except Exception:
+        logger.exception("indexing failure during upload (user=%s)", current_user.id)
+        chunks_indexed = 0  # the file is stored; indexing can be retried later
+
     record_event(
         db, action="document.upload", resource_type="document",
         user_id=current_user.id, resource_id=blob_name, request=request,
@@ -243,6 +250,17 @@ async def serve_local_file(
             status="denied", request=request,
         )
         raise HTTPException(status_code=403, detail="Unauthorized access to this document.")
+    if settings.STORAGE_BACKEND == "postgres":
+        content, ctype = storage.get_postgres_file(f"user_{user_id}/{filename}", user_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="File not found.")
+        from fastapi.responses import Response
+        record_event(
+            db, action="document.view", resource_type="document",
+            user_id=current_user.id, resource_id=f"user_{user_id}/{filename}", request=request,
+        )
+        return Response(content=content, media_type=ctype or "application/octet-stream")
+
     try:
         path = storage.local_file_path(user_id, filename)
     except ValueError:

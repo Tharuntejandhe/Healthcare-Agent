@@ -132,6 +132,42 @@
   font-weight: 500;
 }
 
+.historyItemWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.deleteSessionBtn {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--muted-foreground);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-clay-sm);
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.historyItemWrapper:hover .deleteSessionBtn {
+  opacity: 1;
+}
+
+.deleteSessionBtn:hover {
+  background: var(--error);
+  color: #fff;
+}
+
 .sidebarFooter {
   padding: 1rem 1.2rem;
   display: flex;
@@ -401,6 +437,20 @@
   max-height: 300px;
   display: block;
   object-fit: contain;
+}
+
+.messagePdfAttachment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--input);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-clay-inset);
+  margin-top: 0.5rem;
 }
 
 /* ---------- Loading indicator ---------- */

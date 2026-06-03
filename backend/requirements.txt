@@ -23,6 +23,7 @@ tavily-python>=0.3.0
 langchain-text-splitters>=0.0.1
 google-auth>=2.28.0
 alembic>=1.13.0
+pgvector>=0.2.0
 
 # --- Production hardening ---
 gunicorn>=21.2.0          # multi-worker process manager (wraps uvicorn workers)

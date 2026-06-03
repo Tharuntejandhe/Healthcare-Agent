@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Where uploads + FAISS indexes live. On Render, point this at a mounted disk.
     DATA_DIR: str = str(BACKEND_ROOT / "data")
     # "local" (default, no cloud dependency) or "azure".
-    STORAGE_BACKEND: Literal["local", "azure"] = "local"
+    STORAGE_BACKEND: Literal["local", "postgres"] = "local"
 
     # --- Upload limits (MB) ---
     MAX_UPLOAD_MB: int = 15        # PDFs

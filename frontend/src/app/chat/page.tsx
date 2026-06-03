@@ -19,6 +19,8 @@ import {
   Check,
   FileSearch,
   Sparkles,
+  FileText,
+  Trash2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -34,12 +36,19 @@ import { VoiceInput } from '@/components/chat/VoiceInput';
 import { CameraCapture } from '@/components/chat/CameraCapture';
 import styles from './chat.module.css';
 
+interface Attachment {
+  name: string;
+  type: 'image' | 'pdf';
+  url: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'ai';
   content: string;
   agentName?: string;
   imageUrls?: string[];
+  attachments?: Attachment[];
 }
 
 interface ChatSession {
@@ -69,22 +78,57 @@ export default function ChatPage() {
     ? sessions.find(s => s.id === activeSessionId)?.messages || []
     : [];
 
+  const fetchSessionMessages = async (id: string, token: string | null = null) => {
+    if (!token) token = await getToken();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(prev => prev.map(s => s.id === id ? { ...s, messages: data.messages } : s));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSessionSelect = async (id: string) => {
+    setActiveSessionId(id);
+    const session = sessions.find(s => s.id === id);
+    if (session && (!session.messages || session.messages.length === 0)) {
+      const token = await getToken();
+      fetchSessionMessages(id, token);
+    }
+  };
+
   const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
     setSessions(prevSessions => {
       let currentSession = prevSessions.find(s => s.id === activeSessionId);
       const currentMessages = currentSession?.messages || [];
       const newMessages = typeof updater === 'function' ? updater(currentMessages) : updater;
 
-      if (!currentSession) return prevSessions; // Should not happen with activeSessionId
+      if (!currentSession) return prevSessions;
 
       let title = currentSession.title;
+      let titleChanged = false;
       if (title === 'New Consultation') {
         const firstUserMsg = newMessages.find(m => m.role === 'user');
         if (firstUserMsg && firstUserMsg.content.trim()) {
           title = firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '');
-        } else if (firstUserMsg && firstUserMsg.imageUrls && firstUserMsg.imageUrls.length > 0) {
-          title = 'Image Analysis';
+          titleChanged = true;
+        } else if (firstUserMsg && ((firstUserMsg.imageUrls && firstUserMsg.imageUrls.length > 0) || (firstUserMsg.attachments && firstUserMsg.attachments.length > 0))) {
+          title = 'Document Analysis';
+          titleChanged = true;
         }
+      }
+
+      if (titleChanged) {
+        getToken().then(token => {
+          fetch(`${API_BASE_URL}/api/v1/chat/sessions/${activeSessionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ title })
+          }).catch(console.error);
+        });
       }
 
       const updatedSession = {
@@ -98,8 +142,18 @@ export default function ChatPage() {
     });
   };
 
-  const startNewSession = () => {
+  const startNewSession = async () => {
     const newId = Date.now().toString();
+    const token = await getToken();
+    
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/chat/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: newId, title: 'New Consultation' })
+      });
+    } catch (e) { console.error(e); }
+
     setActiveSessionId(newId);
     setSessions(prev => [
       {
@@ -117,31 +171,68 @@ export default function ChatPage() {
     ]);
   };
 
+  const handleDeleteSession = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    
+    // Optimistic delete
+    setSessions(prev => prev.filter(s => s.id !== id));
+    
+    // If we delete the active session, switch to another or start a new one
+    if (id === activeSessionId) {
+      const remaining = sessions.filter(s => s.id !== id);
+      if (remaining.length > 0) {
+        setActiveSessionId(remaining[0].id);
+        fetchSessionMessages(remaining[0].id);
+      } else {
+        startNewSession();
+      }
+    }
+
+    try {
+      const token = await getToken();
+      await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error('Failed to delete session', e);
+    }
+  };
+
   useEffect(() => {
-    const saved = localStorage.getItem('medihealth_chat_sessions');
-    if (saved) {
+    if (!isLoaded || !isSignedIn) return;
+
+    const loadSessions = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        setSessions(parsed);
-        if (parsed.length > 0) {
-          setActiveSessionId(parsed[0].id);
+        const token = await getToken();
+        const res = await fetch(`${API_BASE_URL}/api/v1/chat/sessions`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Ensure messages array exists
+          const formatted = data.map((s: any) => ({ ...s, messages: s.messages || [] }));
+          setSessions(formatted);
+          if (formatted.length > 0) {
+            setActiveSessionId(formatted[0].id);
+            fetchSessionMessages(formatted[0].id, token);
+          } else {
+            startNewSession();
+          }
         } else {
           startNewSession();
         }
       } catch {
         startNewSession();
+      } finally {
+        setIsMounted(true);
       }
-    } else {
-      startNewSession();
-    }
-    setIsMounted(true);
-  }, []);
+    };
+    
+    loadSessions();
+  }, [isLoaded, isSignedIn]);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('medihealth_chat_sessions', JSON.stringify(sessions));
-    }
-  }, [sessions, isMounted]);
+
 
   useEffect(() => {
     if (isMounted && isLoaded && !isSignedIn) {
@@ -200,7 +291,7 @@ export default function ChatPage() {
     setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+      const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/') || file.type === 'application/pdf');
       if (files.length > 0) {
         setSelectedImages(prev => [...prev, ...files]);
       }
@@ -211,13 +302,17 @@ export default function ChatPage() {
     e.preventDefault();
     if ((!inputValue.trim() && selectedImages.length === 0) || isLoading) return;
 
-    const imageUrls = selectedImages.map((f) => URL.createObjectURL(f));
+    const attachments: Attachment[] = selectedImages.map((f) => ({
+      name: f.name,
+      type: f.type.startsWith('image/') ? 'image' : 'pdf',
+      url: f.type.startsWith('image/') ? URL.createObjectURL(f) : ''
+    }));
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: inputValue.trim(),
-      imageUrls,
+      attachments,
     };
 
     const imagesToProcess = selectedImages; // Store reference before clearing
@@ -230,17 +325,39 @@ export default function ChatPage() {
       const token = await getToken() || '';
 
       let finalQuery = userMsg.content;
+      
+      const imageFiles = imagesToProcess.filter(f => f.type.startsWith('image/'));
+      const pdfFiles = imagesToProcess.filter(f => f.type === 'application/pdf');
+
+      if (pdfFiles.length > 0) {
+        const uploadPromises = pdfFiles.map(async (file) => {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          if (!res.ok) throw new Error(`Failed to upload ${file.name}`);
+        });
+        await Promise.all(uploadPromises);
+        
+        if (!usePersonalAnalysis) {
+            setUsePersonalAnalysis(true);
+        }
+        finalQuery = `[SYSTEM NOTE: The user just uploaded ${pdfFiles.length} document(s). Please reference them if needed.]\n\n` + finalQuery;
+      }
 
       // If there are image(s), analyze each (in parallel) and prepend to the query.
-      if (imagesToProcess.length > 0) {
+      if (imageFiles.length > 0) {
         const analyses = await Promise.all(
-          imagesToProcess.map((img, i) =>
+          imageFiles.map((img, i) =>
             analyzeImage(img, token)
               .then((r) => `Image ${i + 1}: ${r.analysis}`)
               .catch((err) => `Image ${i + 1}: (could not be analyzed — ${err?.message || 'error'})`)
           )
         );
-        finalQuery = `[IMAGE ANALYSIS CONTEXT]:\n${analyses.join('\n\n')}\n\n[USER QUERY]:\n${userMsg.content || 'Based on the image(s) above, what can you tell me?'}`;
+        finalQuery = `[IMAGE ANALYSIS CONTEXT]:\n${analyses.join('\n\n')}\n\n[USER QUERY]:\n${finalQuery || 'Based on the image(s) above, what can you tell me?'}`;
       }
 
       const res = await fetch(`${API_BASE_URL}/api/v1/chat/query`, {
@@ -251,7 +368,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           query: finalQuery,
-          use_personal_analysis: usePersonalAnalysis
+          use_personal_analysis: pdfFiles.length > 0 ? true : usePersonalAnalysis,
+          session_id: activeSessionId
         }),
       });
 
@@ -315,16 +433,24 @@ export default function ChatPage() {
               </div>
             ) : (
               sessions.map(session => (
-                <button
-                  key={session.id}
-                  className={`${styles.historyItem} ${session.id === activeSessionId ? styles.historyItemActive : ''}`}
-                  onClick={() => setActiveSessionId(session.id)}
-                >
-                  <span className={styles.historyItemTitle}>{session.title}</span>
-                  <span className={styles.historyItemTime}>
-                    {new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                  </span>
-                </button>
+                <div key={session.id} className={styles.historyItemWrapper}>
+                  <button
+                    className={`${styles.historyItem} ${session.id === activeSessionId ? styles.historyItemActive : ''}`}
+                    onClick={() => handleSessionSelect(session.id)}
+                  >
+                    <span className={styles.historyItemTitle}>{session.title}</span>
+                    <span className={styles.historyItemTime}>
+                      {new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  </button>
+                  <button 
+                    className={styles.deleteSessionBtn} 
+                    onClick={(e) => handleDeleteSession(e, session.id)}
+                    title="Delete consultation"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -421,8 +547,20 @@ export default function ChatPage() {
                           {msg.content}
                         </ReactMarkdown>
                         {msg.imageUrls?.map((u, i) => (
-                          <div key={i} className={styles.messageImageContainer}>
+                          <div key={`img-${i}`} className={styles.messageImageContainer}>
                             <img src={u} alt={`Uploaded attachment ${i + 1}`} className={styles.messageImage} />
+                          </div>
+                        ))}
+                        {msg.attachments?.map((att, i) => (
+                          <div key={`att-${i}`} className={styles.messageImageContainer}>
+                            {att.type === 'image' ? (
+                              <img src={att.url} alt={`Uploaded attachment ${i + 1}`} className={styles.messageImage} />
+                            ) : (
+                              <div className={styles.messagePdfAttachment}>
+                                <FileText size={16} />
+                                <span>{att.name}</span>
+                              </div>
+                            )}
                           </div>
                         ))}
                         {msg.role === 'ai' && (

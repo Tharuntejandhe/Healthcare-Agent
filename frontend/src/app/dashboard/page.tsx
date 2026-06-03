@@ -128,22 +128,25 @@ export default function Dashboard() {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isPdf = file.type === 'application/pdf';
-    const isImage = file.type.startsWith('image/');
-    if (!isPdf && !isImage) {
-      toast.error('Upload a PDF, or a photo (JPEG/PNG) of your report.');
-      e.target.value = '';
-      return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(f => f.type === 'application/pdf' || f.type.startsWith('image/'));
+    if (validFiles.length !== files.length) {
+      toast.error('Only PDFs or photos (JPEG/PNG) are supported.');
+      if (validFiles.length === 0) {
+        e.target.value = '';
+        return;
+      }
     }
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    const token = await getToken();
 
-    const uploadPromise = (async () => {
-      const token = await getToken();
+    const uploadPromises = validFiles.map(async (file, index) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
       const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -155,7 +158,7 @@ export default function Dashboard() {
       }
       const data = await res.json();
       const newReport: Report = {
-        id: Date.now().toString(),
+        id: Date.now().toString() + '-' + index,
         name: file.name,
         date: new Date().toISOString().split('T')[0],
         status: 'completed',
@@ -163,18 +166,30 @@ export default function Dashboard() {
         url: data.azure_url,
         blobName: data.blob_name,
       };
-      setReports((prev) => [newReport, ...prev]);
-      return data;
-    })();
+      return newReport;
+    });
 
-    toast.promise(uploadPromise, {
-      loading: 'Uploading & indexing your report…',
-      success: 'Report uploaded and indexed!',
-      error: (err) => `Upload failed: ${err.message}`,
+    const overallPromise = Promise.allSettled(uploadPromises).then(results => {
+      const successful = results.filter(r => r.status === 'fulfilled').map(r => (r as PromiseFulfilledResult<Report>).value);
+      const failed = results.filter(r => r.status === 'rejected');
+      
+      if (successful.length > 0) {
+        setReports(prev => [...successful, ...prev]);
+      }
+      
+      if (failed.length > 0) {
+        throw new Error(`${failed.length} file(s) failed to upload.`);
+      }
+    });
+
+    toast.promise(overallPromise, {
+      loading: validFiles.length > 1 ? `Uploading ${validFiles.length} reports…` : 'Uploading & indexing your report…',
+      success: validFiles.length > 1 ? `Successfully uploaded ${validFiles.length} reports!` : 'Report uploaded and indexed!',
+      error: (err) => err.message,
     });
 
     try {
-      await uploadPromise;
+      await overallPromise;
     } catch {
       /* toast already surfaced the error */
     } finally {
@@ -237,6 +252,7 @@ export default function Dashboard() {
           className={styles.uploadInput}
           onChange={handleFileUpload}
           accept=".pdf,image/*"
+          multiple
         />
         <label htmlFor="report-upload">
           <Button as="span" variant="primary" isLoading={isUploading} size="large">

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus, X, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { springClay } from '@/lib/motion';
 import styles from './PhotoUpload.module.css';
@@ -18,9 +18,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, onImagesChange
   const [previews, setPreviews] = useState<string[]>([]);
 
   useEffect(() => {
-    const urls = images.map((f) => URL.createObjectURL(f));
+    const urls = images.map((f) => f.type.startsWith('image/') ? URL.createObjectURL(f) : '');
     setPreviews(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+    return () => urls.forEach((u) => { if (u) URL.revokeObjectURL(u) });
   }, [images]);
 
   const handleButtonClick = () => fileInputRef.current?.click();
@@ -30,13 +30,13 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, onImagesChange
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (picked.length === 0) return;
 
-    const imgs = picked.filter((f) => f.type.startsWith('image/'));
-    if (imgs.length !== picked.length) toast.error('Only image files can be attached.');
-    if (imgs.length === 0) return;
+    const valid = picked.filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf');
+    if (valid.length !== picked.length) toast.error('Only images and PDFs can be attached.');
+    if (valid.length === 0) return;
 
     const room = max - images.length;
-    if (imgs.length > room) toast(`You can attach up to ${max} photos.`);
-    onImagesChange([...images, ...imgs.slice(0, room)]);
+    if (valid.length > room) toast(`You can attach up to ${max} files.`);
+    onImagesChange([...images, ...valid.slice(0, room)]);
   };
 
   const removeAt = (idx: number) => onImagesChange(images.filter((_, i) => i !== idx));
@@ -47,26 +47,33 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, onImagesChange
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/*"
+        accept=".pdf,image/*"
         multiple
         className={styles.hiddenInput}
       />
 
-      {previews.map((url, i) => (
+      {images.map((file, i) => (
         <motion.div
-          key={url}
+          key={i}
           className={styles.previewWrapper}
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={springClay}
         >
-          <img src={url} alt={`Preview ${i + 1}`} className={styles.previewImage} />
+          {file.type.startsWith('image/') ? (
+            <img src={previews[i]} alt={`Preview ${i + 1}`} className={styles.previewImage} />
+          ) : (
+            <div className={styles.previewPdf}>
+              <FileText size={24} />
+              <span className={styles.pdfName}>{file.name.slice(0, 10)}...</span>
+            </div>
+          )}
           <motion.button
             type="button"
             onClick={() => removeAt(i)}
             className={styles.clearBtn}
-            title="Remove image"
-            aria-label={`Remove image ${i + 1}`}
+            title="Remove file"
+            aria-label={`Remove file ${i + 1}`}
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.85 }}
             transition={springClay}

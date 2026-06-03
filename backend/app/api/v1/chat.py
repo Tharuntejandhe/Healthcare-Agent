@@ -1,5 +1,6 @@
 import logging
-from typing import Any
+import uuid
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -14,6 +15,7 @@ from app.models.user import User
 from app.services.audit import record_event
 from app.services.ai.disclaimer import ensure_disclaimer
 from app.services.ai.graph import ai_app
+from app.crud import crud_chat
 
 logger = logging.getLogger("app.api.chat")
 router = APIRouter()
@@ -25,6 +27,15 @@ class ChatRequest(BaseModel):
     # chat model has a large context window; clamp only to bound abuse.
     query: str = Field(min_length=1, max_length=32000)
     use_personal_analysis: bool = False
+    session_id: Optional[str] = None
+    attachments: Optional[list] = None
+
+class SessionCreate(BaseModel):
+    id: str
+    title: str
+
+class SessionUpdate(BaseModel):
+    title: str
 
 
 class ChatResponse(BaseModel):
@@ -45,6 +56,16 @@ async def handle_chat_query(
     The LangGraph invocation fans out to several blocking Groq round-trips, so it
     runs in a worker thread to avoid stalling the event loop for all users.
     """
+
+    if body.session_id:
+        crud_chat.add_message(
+            db=db,
+            session_id=body.session_id,
+            id=str(uuid.uuid4()),
+            role="user",
+            content=body.query,
+            attachments=body.attachments
+        )
 
     def _run() -> dict:
         from app.services.ai.parser import parse_lab_report_lines
@@ -97,4 +118,45 @@ async def handle_chat_query(
     response_text = ensure_disclaimer(
         result.get("final_response", "Sorry, I could not process that request.")
     )
+
+    if body.session_id:
+        crud_chat.add_message(
+            db=db,
+            session_id=body.session_id,
+            id=str(uuid.uuid4()),
+            role="ai",
+            content=response_text
+        )
+
     return {"response": response_text, "classification": classification}
+
+@router.get("/sessions")
+def list_sessions(db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
+    sessions = crud_chat.get_sessions_for_user(db, current_user.id)
+    return [{"id": s.id, "title": s.title, "updatedAt": s.updated_at.isoformat()} for s in sessions]
+
+@router.get("/sessions/{session_id}")
+def get_session(session_id: str, db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
+    session = crud_chat.get_session(db, session_id, current_user.id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    messages = [{"id": m.id, "role": m.role, "content": m.content, "attachments": m.attachments or []} for m in session.messages]
+    return {"id": session.id, "title": session.title, "updatedAt": session.updated_at.isoformat(), "messages": messages}
+
+@router.post("/sessions")
+def create_session(body: SessionCreate, db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
+    session = crud_chat.create_session(db, body.id, current_user.id, body.title)
+    return {"id": session.id, "title": session.title, "updatedAt": session.updated_at.isoformat()}
+
+@router.put("/sessions/{session_id}")
+def update_session(session_id: str, body: SessionUpdate, db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
+    session = crud_chat.update_session_title(db, session_id, current_user.id, body.title)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"id": session.id, "title": session.title, "updatedAt": session.updated_at.isoformat()}
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str, db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
+    if crud_chat.delete_session(db, session_id, current_user.id):
+        return {"message": "Deleted"}
+    raise HTTPException(status_code=404, detail="Session not found")

@@ -1,5 +1,6 @@
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, LargeBinary
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 
 from app.db.base_class import Base
 
@@ -23,4 +24,25 @@ class Document(Base):
     content_type = Column(String, nullable=True)
     size_bytes = Column(Integer, nullable=True)
     chunks_indexed = Column(Integer, nullable=True, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
+    source_file = Column(String, nullable=True)
+    text = Column(String, nullable=False)
+    embedding = Column(Vector(384), nullable=False)
+
+
+class DocumentBlob(Base):
+    __tablename__ = "document_blobs"
+
+    blob_name = Column(String, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    content = Column(LargeBinary, nullable=False)
+    content_type = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
