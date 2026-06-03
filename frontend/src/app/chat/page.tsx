@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   MessagesSquare,
@@ -22,8 +23,6 @@ import {
   FileText,
   Trash2,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -31,10 +30,13 @@ import { Logo } from '@/components/ui/Logo';
 import { API_BASE_URL, analyzeImage, extractErrorMessage } from '@/lib/api';
 import { bubbleIn, springClay } from '@/lib/motion';
 import { useAuth } from '@clerk/nextjs';
-import { PhotoUpload } from '@/components/chat/PhotoUpload';
-import { VoiceInput } from '@/components/chat/VoiceInput';
-import { CameraCapture } from '@/components/chat/CameraCapture';
 import styles from './chat.module.css';
+
+// Dynamically import heavy components to speed up initial load
+const MarkdownRenderer = dynamic(() => import('@/components/chat/MarkdownRenderer'), { ssr: false });
+const PhotoUpload = dynamic(() => import('@/components/chat/PhotoUpload').then(m => m.PhotoUpload), { ssr: false });
+const VoiceInput = dynamic(() => import('@/components/chat/VoiceInput').then(m => m.VoiceInput), { ssr: false });
+const CameraCapture = dynamic(() => import('@/components/chat/CameraCapture').then(m => m.CameraCapture), { ssr: false });
 
 interface Attachment {
   name: string;
@@ -400,7 +402,45 @@ export default function ChatPage() {
     }
   };
 
-  if (!isMounted) return null;
+  if (!isMounted) {
+    return (
+      <div className={styles.chatWrapper}>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarInner}>
+            <div className={styles.sidebarHeader} style={{ opacity: 0.5 }}>
+              <Logo size="sm" />
+            </div>
+            <div className={styles.historyList}>
+              <div className={styles.emptyHistory} style={{ opacity: 0.7 }}>
+                <span><MessagesSquare size={22} /></span>
+                <p>Loading your workspace...</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <main className={styles.mainChat}>
+          <div className={styles.mainInner}>
+            <header className={styles.header}>
+              <div className={styles.headerInfo}>
+                <span className={styles.headerMark} style={{ opacity: 0.5 }}>
+                  <Sparkles size={22} strokeWidth={2.4} />
+                </span>
+                <div className={styles.headerText} style={{ opacity: 0.7 }}>
+                  <h2>Initializing...</h2>
+                  <p>Preparing Clinical Intelligence</p>
+                </div>
+              </div>
+            </header>
+            <div className={styles.chatArea}>
+              <div className={styles.chatInner}>
+                {/* Skeleton state */}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const canSend = (inputValue.trim() !== '' || selectedImages.length > 0) && !isLoading && !isRecording;
 
@@ -532,20 +572,7 @@ export default function ChatPage() {
                     <div className={styles.messageContent}>
                       {msg.role === 'ai' && <span className={styles.agentName}>{msg.agentName}</span>}
                       <div className={styles.bubble}>
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            table: ({ node, ...props }) => (
-                              <div className={styles.tableScroll}>
-                                <table className={styles.mdTable} {...props} />
-                              </div>
-                            ),
-                            th: ({ node, ...props }) => <th className={styles.mdTh} {...props} />,
-                            td: ({ node, ...props }) => <td className={styles.mdTd} {...props} />,
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+                        <MarkdownRenderer content={msg.content} />
                         {msg.imageUrls?.map((u, i) => (
                           <div key={`img-${i}`} className={styles.messageImageContainer}>
                             <img src={u} alt={`Uploaded attachment ${i + 1}`} className={styles.messageImage} />
