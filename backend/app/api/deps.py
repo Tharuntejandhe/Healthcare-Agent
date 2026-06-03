@@ -59,7 +59,7 @@ def _resolve_user(db: Session, token: str) -> Tuple[User, TokenPayload]:
             full_name="Patient",
             google_sub=sub,
         )
-        user.auth_provider = "clerk"
+        user.auth_provider = "clerk"  # type: ignore[assignment]
         db.commit()
 
     if not user.is_active:

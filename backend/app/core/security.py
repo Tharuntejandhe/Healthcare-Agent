@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
 
 import bcrypt
-from jose import jwt
+from jose import jwt, ExpiredSignatureError
 
 from app.core.config import settings
 
@@ -45,13 +45,14 @@ def decode_access_token(token: str) -> dict:
     try:
         jwks = get_jwks()
         unverified_header = jwt.get_unverified_header(token)
-        rsa_key = _find_rsa_key(jwks, unverified_header.get("kid"))
+        kid: str = unverified_header.get("kid", "")
+        rsa_key = _find_rsa_key(jwks, kid)
         
         # If no matching key found, Clerk may have rotated keys — refresh and retry once
         if not rsa_key:
-            logger.warning("No matching key for kid=%s in cached JWKS, refreshing...", unverified_header.get("kid"))
+            logger.warning("No matching key for kid=%s in cached JWKS, refreshing...", kid)
             jwks = get_jwks(force_refresh=True)
-            rsa_key = _find_rsa_key(jwks, unverified_header.get("kid"))
+            rsa_key = _find_rsa_key(jwks, kid)
         
         if rsa_key:
             payload = jwt.decode(
@@ -61,12 +62,12 @@ def decode_access_token(token: str) -> dict:
                 options={"verify_aud": False}
             )
             return payload
-        logger.error(f"No matching key found for kid={unverified_header.get('kid')} even after refresh")
+        logger.error(f"No matching key found for kid={kid} even after refresh")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unable to find appropriate key.",
         )
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired.")
     except HTTPException:
         raise
