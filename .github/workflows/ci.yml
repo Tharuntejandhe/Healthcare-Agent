@@ -1,0 +1,117 @@
+name: CI
+
+# Verification only. Deployment is handled by the platforms:
+#   - Frontend  → Vercel  (auto-deploys on push to main)
+#   - Backend   → Render  (auto-deploys on push to main via render.yaml)
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint (non-blocking)
+        run: npx eslint .
+        continue-on-error: true
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+
+  backend:
+    name: Backend (import + tests, SQLite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      ENVIRONMENT: development
+      DATABASE_URL: "sqlite:///./test_ci.db"
+      SECRET_KEY: "ci-test-secret-key-not-for-production-use-only-1234"
+      ENABLE_RAG: "false"
+      RATE_LIMIT_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Import smoke test
+        run: python -c "import app.main; print('app imports OK')"
+      - name: Run tests
+        run: pytest -q
+
+  backend-postgres:
+    name: Backend (tests + migrations, Postgres — prod parity)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: medi
+          POSTGRES_PASSWORD: medi
+          POSTGRES_DB: medihealth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medi"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Exercises the real psycopg2/Postgres dialect that production uses.
+      ENVIRONMENT: development
+      DATABASE_URL: "postgresql://medi:medi@localhost:5432/medihealth_test"
+      SECRET_KEY: "ci-test-secret-key-not-for-production-use-only-1234"
+      ENABLE_RAG: "false"
+      RATE_LIMIT_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Validate migrations on Postgres
+        run: alembic upgrade head
+      - name: Run tests
+        run: pytest -q
+
+  security-audit:
+    name: Dependency vulnerability scan (pip-audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install pip-audit
+      # Non-blocking for now (the langchain transitive tree is large). Triage
+      # findings and flip to blocking once the tree is clean. See PRODUCTION_READINESS.md.
+      - name: Audit dependencies
+        run: pip-audit -r requirements.txt --progress-spinner=off
+        continue-on-error: true

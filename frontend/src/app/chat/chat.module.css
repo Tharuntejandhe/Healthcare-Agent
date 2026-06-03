@@ -1,0 +1,513 @@
+/* ============================================================
+   Chat — claymorphism full-height consultation workspace
+   ============================================================ */
+
+.chatWrapper {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.sidebarInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-clay);
+  overflow: hidden;
+}
+
+.sidebarHeader {
+  padding: 1.6rem 1.4rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.sidebarTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.historyList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.emptyHistory {
+  margin-top: 1.5rem;
+  padding: 1.6rem 1.2rem;
+  border-radius: var(--radius-lg);
+  background: var(--input);
+  box-shadow: var(--shadow-clay-inset);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.emptyHistory span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--shadow-clay-sm);
+  color: var(--primary);
+}
+
+.emptyHistory p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.sidebarFooter {
+  padding: 1rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+/* ---------- Main column ---------- */
+.mainChat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 1.1rem 1.1rem 1.1rem 0;
+}
+
+.mainInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-clay);
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: 1.1rem 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.headerMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow: var(--shadow-clay-sm);
+  flex-shrink: 0;
+}
+
+.headerText h2 {
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.headerText p {
+  font-size: 0.74rem;
+  color: var(--success);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  box-shadow: 0 0 0 0 var(--success);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+/* ---------- Chat scroll area ---------- */
+.chatArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+}
+
+.chatInner {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+}
+
+.messageWrapper {
+  display: flex;
+  gap: 0.9rem;
+  max-width: 88%;
+}
+
+.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.ai {
+  align-self: flex-start;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-clay-sm);
+}
+
+.userAvatar {
+  background: var(--gradient-brand);
+  color: #fff;
+}
+
+.aiAvatar {
+  background: var(--card);
+  color: var(--primary);
+}
+
+.messageContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.user .messageContent {
+  align-items: flex-end;
+}
+
+.agentName {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 0.3rem;
+}
+
+.bubble {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.96rem;
+  line-height: 1.62;
+  word-break: break-word;
+}
+
+.user .bubble {
+  background: var(--gradient-brand);
+  color: #fff;
+  border-top-right-radius: var(--radius-sm);
+  box-shadow:
+    0 12px 24px -14px hsla(var(--primary-hue), 72%, 28%, 0.55),
+    inset 0 2px 1px 0 hsla(0, 0%, 100%, 0.3);
+}
+
+.ai .bubble {
+  background: var(--card);
+  color: var(--foreground);
+  border-top-left-radius: var(--radius-sm);
+  box-shadow: var(--shadow-clay-sm);
+  padding-bottom: 2.6rem;
+}
+
+/* Markdown niceties inside bubbles */
+.bubble :global(p) { margin-bottom: 0.5rem; }
+.bubble :global(p:last-child) { margin-bottom: 0; }
+.bubble :global(ul),
+.bubble :global(ol) { margin: 0.4rem 0 0.6rem 1.1rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.bubble :global(li) { line-height: 1.55; }
+.bubble :global(strong) { font-weight: 700; }
+.bubble :global(a) { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.user .bubble :global(a) { color: #fff; }
+.bubble :global(code) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius-sm);
+  background: var(--input);
+  box-shadow: var(--shadow-clay-inset);
+}
+.user .bubble :global(code) { background: hsla(0, 0%, 100%, 0.18); box-shadow: none; }
+.bubble :global(pre) {
+  margin: 0.5rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--input);
+  box-shadow: var(--shadow-clay-inset);
+  overflow-x: auto;
+}
+.bubble :global(pre code) { background: none; box-shadow: none; padding: 0; }
+
+.tableScroll { overflow-x: auto; margin: 0.8rem 0; }
+.mdTable {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 380px;
+  font-size: 0.88rem;
+}
+.mdTh {
+  border-bottom: 1.5px solid var(--border);
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  font-weight: 700;
+  color: var(--primary);
+}
+.mdTd {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.7rem;
+}
+
+.speakBtn {
+  position: absolute;
+  bottom: 0.6rem;
+  right: 0.6rem;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--muted-foreground);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-clay-sm);
+}
+
+.speaking {
+  background: var(--primary);
+  color: #fff;
+}
+
+.messageImageContainer {
+  margin-top: 0.7rem;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-clay-inset);
+}
+
+.messageImage {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+  object-fit: contain;
+}
+
+/* ---------- Loading indicator ---------- */
+.loadingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.05rem 1.25rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+}
+
+/* ---------- Input area ---------- */
+.inputArea {
+  flex-shrink: 0;
+  padding: 0.9rem 1.6rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.inputContainer {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.7rem;
+  background: var(--input);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-clay-inset);
+}
+
+.textField {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.inputBox {
+  width: 100%;
+  padding: 0.65rem 0.6rem;
+  background: transparent;
+  border: none;
+  font-size: 0.96rem;
+  font-family: inherit;
+  color: var(--foreground);
+  outline: none;
+}
+
+.inputBox::placeholder { color: var(--muted-foreground); }
+.inputBox:disabled { cursor: not-allowed; }
+
+.inputRecording { opacity: 0; }
+
+.recordingOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0 0.6rem;
+  color: var(--error);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.waveContainer {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+
+.waveBar {
+  width: 3.5px;
+  border-radius: var(--radius-full);
+  background: var(--error);
+}
+
+/* ---------- Toggle bar ---------- */
+.toggleBar {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.toggleChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--radius-full);
+  background: var(--card);
+  box-shadow: var(--shadow-clay-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  user-select: none;
+  border: none;
+}
+
+.toggleChipActive {
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-clay-inset);
+  background: var(--primary-light);
+}
+.dark .toggleChipActive { color: var(--primary); }
+
+.toggleCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  background: var(--input);
+  box-shadow: var(--shadow-clay-inset);
+  color: transparent;
+  flex-shrink: 0;
+}
+
+.toggleChipActive .toggleCheck {
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow: none;
+}
+
+.encChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  opacity: 0.8;
+}
+
+@media (max-width: 860px) {
+  .sidebar { display: none; }
+  .mainChat { padding: 0.7rem; }
+  .messageWrapper { max-width: 94%; }
+}

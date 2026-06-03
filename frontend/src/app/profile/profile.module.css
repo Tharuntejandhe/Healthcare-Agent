@@ -1,0 +1,177 @@
+/* Profile — claymorphism. Rendered inside <AppShell>. */
+
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.pageTitle {
+  font-size: clamp(1.7rem, 3.4vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.pageSubtitle {
+  color: var(--muted-foreground);
+  margin-top: 0.3rem;
+  font-size: 1rem;
+}
+.headerActions {
+  display: flex;
+  gap: 0.7rem;
+}
+
+/* Hero / avatar card */
+.heroCard {
+  margin-bottom: 1.8rem;
+}
+.heroInner {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+}
+.avatar {
+  width: 104px;
+  height: 104px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-brand-soft);
+  color: var(--primary);
+  box-shadow: var(--shadow-clay-inset);
+}
+.dark .avatar { color: var(--primary); }
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.heroName {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.emailBadge {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.heroNameEdit {
+  width: min(360px, 100%);
+}
+
+/* Sections */
+.sectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.4rem;
+}
+.sectionCard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.3rem;
+  border-bottom: 1px solid var(--border);
+}
+.sectionIcon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  box-shadow: var(--shadow-clay-inset);
+}
+.sectionTitle {
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+/* Detail rows */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 0;
+}
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rowIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+.rowValue {
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--foreground);
+  word-break: break-word;
+}
+.muted {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+.rowInput {
+  width: 100%;
+}
+/* Neutralize the Input wrapper's default bottom margin inside compact rows. */
+.rowInput > div {
+  margin-bottom: 0;
+}
+
+/* Sign out */
+.signOutRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.4rem;
+}
+.signOutBtn {
+  color: var(--error);
+}
+
+@media (max-width: 560px) {
+  .heroInner {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  .heroText { align-items: center; }
+  .emailBadge { align-self: center; }
+  .headerActions { width: 100%; }
+}

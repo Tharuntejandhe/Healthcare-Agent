@@ -1,0 +1,36 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-clay-sm);
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.sm { width: 36px; height: 36px; }
+.md { width: 42px; height: 42px; }
+.lg { width: 52px; height: 52px; }
+
+.default { color: var(--foreground); }
+
+.primary {
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow:
+    0 10px 20px -10px hsla(var(--primary-hue), 72%, 28%, 0.5),
+    inset 0 2px 1px 0 hsla(0, 0%, 100%, 0.4);
+}
+
+.ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted-foreground);
+}
+
+.danger { color: var(--error); }

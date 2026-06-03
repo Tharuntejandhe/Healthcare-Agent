@@ -1,0 +1,39 @@
+.voiceContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.micBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--card);
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  outline: none;
+  box-shadow: var(--shadow-clay-sm);
+  flex-shrink: 0;
+}
+
+.micBtn:hover {
+  color: var(--primary);
+}
+
+.recording {
+  background: var(--error);
+  color: #fff;
+  box-shadow:
+    0 0 0 4px var(--error-soft),
+    var(--shadow-clay-sm);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

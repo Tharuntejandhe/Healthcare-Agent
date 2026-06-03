@@ -1,0 +1,115 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font-weight: 650;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  user-select: none;
+  letter-spacing: 0.01em;
+  transition: transform 0.18s var(--ease-clay), box-shadow 0.22s var(--ease-out),
+    filter 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.small  { padding: 0.5rem 0.95rem;  font-size: 0.875rem; border-radius: var(--radius-sm); }
+.medium { padding: 0.72rem 1.4rem;  font-size: 0.97rem; }
+.large  { padding: 0.95rem 1.9rem;  font-size: 1.06rem; border-radius: var(--radius-lg); }
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Tactile clay press — convex → pressed concave */
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+/* ---------- Primary (gradient clay) ---------- */
+.primary {
+  background: var(--gradient-brand);
+  color: #ffffff;
+  box-shadow:
+    0 12px 24px -10px hsla(var(--primary-hue), 72%, 28%, 0.55),
+    inset 0 2px 1px 0 hsla(0, 0%, 100%, 0.45),
+    inset 0 -4px 9px 0 hsla(var(--primary-hue), 80%, 18%, 0.4);
+}
+.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.05) saturate(1.05);
+  box-shadow:
+    0 20px 34px -12px hsla(var(--primary-hue), 72%, 28%, 0.6),
+    inset 0 2px 1px 0 hsla(0, 0%, 100%, 0.5),
+    inset 0 -4px 9px 0 hsla(var(--primary-hue), 80%, 18%, 0.4);
+}
+.primary:active:not(:disabled) {
+  box-shadow:
+    0 5px 12px -8px hsla(var(--primary-hue), 72%, 28%, 0.55),
+    inset 0 3px 8px 0 hsla(var(--primary-hue), 80%, 16%, 0.5);
+}
+
+/* ---------- Secondary (soft clay surface) ---------- */
+.secondary {
+  background: var(--card);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-clay-sm);
+}
+.secondary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-clay); color: var(--primary); }
+.secondary:active:not(:disabled) { box-shadow: var(--shadow-clay-pressed); }
+
+/* ---------- Outline (flat, soft ring) ---------- */
+.outline {
+  background: transparent;
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1.5px var(--border);
+}
+.outline:hover:not(:disabled) {
+  background: var(--card);
+  box-shadow: var(--shadow-clay-sm);
+  transform: translateY(-1px);
+}
+.outline:active:not(:disabled) { box-shadow: var(--shadow-clay-pressed); }
+
+/* ---------- Ghost ---------- */
+.ghost {
+  background: transparent;
+  color: var(--muted-foreground);
+  box-shadow: none;
+}
+.ghost:hover:not(:disabled) { background: var(--muted); color: var(--foreground); }
+.ghost:active:not(:disabled) { box-shadow: var(--shadow-clay-pressed); }
+
+.fullWidth { width: 100%; }
+.pill { border-radius: var(--radius-full); }
+
+/* ---------- Loading ---------- */
+.loading {
+  color: transparent !important;
+  pointer-events: none;
+}
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.15em;
+  height: 1.15em;
+  margin: -0.575em 0 0 -0.575em;
+  border: 2px solid hsla(0, 0%, 100%, 0.35);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 0.6s linear infinite;
+}
+.outline.loading::after,
+.ghost.loading::after,
+.secondary.loading::after {
+  border: 2px solid hsla(var(--primary-hue), 30%, 50%, 0.3);
+  border-top-color: var(--primary);
+}

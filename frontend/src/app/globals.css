@@ -1,0 +1,298 @@
+/* ============================================================
+   MediHealth — Claymorphism design system
+   Palette: teal + emerald (brand), seafoam (secondary), soft indigo (accent),
+   evolved into soft, puffy "clay" surfaces with dual inner shadows.
+
+   IMPORTANT: every legacy token name is preserved so any not-yet-migrated
+   module keeps rendering. New clay tokens are layered on top.
+   ============================================================ */
+
+:root {
+  /* ---- Hue tokens (legacy names kept) ---- */
+  --primary-hue: 172;      /* teal */
+  --secondary-hue: 158;    /* emerald */
+  --accent-hue: 255;       /* soft indigo */
+
+  /* ---- Surface ---- */
+  --background: #e7f0ee;          /* soft tinted clay backdrop */
+  --foreground: #0c2723;
+  --card: #f4faf8;                /* raised clay surface (near white, warm-cool) */
+  --card-foreground: #0c2723;
+
+  /* ---- Brand ---- */
+  --primary: hsl(var(--primary-hue), 70%, 42%);
+  --primary-dark: hsl(var(--primary-hue), 72%, 33%);
+  --primary-light: hsl(var(--primary-hue), 70%, 94%);
+
+  --secondary: hsl(var(--secondary-hue), 64%, 43%);
+  --secondary-dark: hsl(var(--secondary-hue), 66%, 34%);
+  --accent: hsl(var(--accent-hue), 78%, 68%);
+
+  /* ---- Neutrals ---- */
+  --muted: #dceae7;
+  --muted-foreground: #57716d;
+
+  --border: rgba(12, 60, 54, 0.08);
+  --input: #eef6f4;
+
+  /* ---- Status ---- */
+  --success: #10b981;
+  --success-soft: #d6f5e9;
+  --warning: #f59e0b;
+  --warning-soft: #fdeccd;
+  --error: #ef4444;
+  --error-soft: #fbdcdc;
+  --info: hsl(var(--accent-hue), 78%, 60%);
+
+  /* ---- Legacy glass aliases (now clay-tinted) ---- */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.7);
+
+  /* Modal / drawer scrim (shared by AppShell drawer + camera modal) */
+  --overlay: rgba(4, 20, 18, 0.55);
+
+  /* ---- Radii (puffier for clay) ---- */
+  --radius-sm: 0.7rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.4rem;
+  --radius-xl: 2rem;
+  --radius-2xl: 2.6rem;
+  --radius-full: 9999px;
+
+  /* ============================================================
+     CLAY ENGINE
+     Three tones blended: an outer drop shadow, an inset dark edge
+     (bottom-right) and an inset highlight (top-left).
+     ============================================================ */
+  --clay-dark: hsla(var(--primary-hue), 32%, 34%, 0.16);   /* cool inner shadow */
+  --clay-light: rgba(255, 255, 255, 0.92);                  /* inner highlight  */
+  --clay-outer: hsla(var(--primary-hue), 40%, 26%, 0.16);   /* ambient drop     */
+
+  /* Convex (puffed out) — default surface */
+  --shadow-clay:
+    0 18px 38px -16px var(--clay-outer),
+    inset -6px -6px 14px var(--clay-dark),
+    inset 6px 6px 14px var(--clay-light);
+
+  --shadow-clay-sm:
+    0 10px 22px -14px var(--clay-outer),
+    inset -3px -3px 8px var(--clay-dark),
+    inset 3px 3px 8px var(--clay-light);
+
+  /* Raised — hover / lifted */
+  --shadow-clay-raised:
+    0 28px 54px -18px var(--clay-outer),
+    inset -7px -7px 16px var(--clay-dark),
+    inset 7px 7px 16px var(--clay-light);
+
+  /* Concave (pushed in) — inputs, wells, pressed */
+  --shadow-clay-inset:
+    inset 5px 5px 11px var(--clay-dark),
+    inset -5px -5px 11px var(--clay-light);
+
+  --shadow-clay-pressed:
+    0 4px 10px -8px var(--clay-outer),
+    inset 4px 4px 9px var(--clay-dark),
+    inset -4px -4px 9px var(--clay-light);
+
+  /* Legacy shadow aliases mapped onto clay */
+  --shadow-sm: var(--shadow-clay-sm);
+  --shadow-md: var(--shadow-clay);
+  --shadow-lg: var(--shadow-clay-raised);
+  --shadow-glow: 0 0 0 5px hsla(var(--primary-hue), 70%, 45%, 0.18);
+
+  /* ---- Gradients ---- */
+  --gradient-brand: linear-gradient(
+    135deg,
+    hsl(var(--primary-hue), 72%, 46%) 0%,
+    hsl(var(--secondary-hue), 66%, 46%) 100%
+  );
+  --gradient-brand-soft: linear-gradient(
+    135deg,
+    hsl(var(--primary-hue), 70%, 95%) 0%,
+    hsl(var(--secondary-hue), 66%, 95%) 100%
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    hsl(var(--accent-hue), 80%, 72%) 0%,
+    hsl(var(--primary-hue), 70%, 60%) 100%
+  );
+
+  /* ---- Motion ---- */
+  --ease-clay: cubic-bezier(0.34, 1.56, 0.64, 1); /* gentle overshoot */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-all: all 0.28s var(--ease-out);
+  --transition-clay: all 0.32s var(--ease-clay);
+
+  --font-sans: var(--font-geist-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  --font-mono: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+.dark {
+  --background: #07181a;
+  --foreground: #e6f4f0;
+  --card: #0f2a2b;
+  --card-foreground: #e6f4f0;
+
+  --primary: hsl(var(--primary-hue), 66%, 54%);
+  --primary-dark: hsl(var(--primary-hue), 66%, 44%);
+  --primary-light: hsla(var(--primary-hue), 66%, 54%, 0.16);
+
+  --secondary: hsl(var(--secondary-hue), 56%, 54%);
+  --secondary-dark: hsl(var(--secondary-hue), 58%, 44%);
+  --accent: hsl(var(--accent-hue), 78%, 74%);
+
+  --muted: #15393a;
+  --muted-foreground: #93b3ae;
+
+  --border: rgba(173, 232, 222, 0.08);
+  --input: #0c2425;
+
+  --success-soft: rgba(16, 185, 129, 0.18);
+  --warning-soft: rgba(245, 158, 11, 0.18);
+  --error-soft: rgba(239, 68, 68, 0.18);
+
+  --glass-bg: rgba(15, 42, 43, 0.55);
+  --glass-border: rgba(173, 232, 222, 0.10);
+
+  /* Dark clay: highlight is a faint teal glint, shadow is true black */
+  --clay-dark: rgba(0, 0, 0, 0.5);
+  --clay-light: hsla(var(--primary-hue), 50%, 60%, 0.10);
+  --clay-outer: rgba(0, 0, 0, 0.55);
+
+  --shadow-glow: 0 0 0 5px hsla(var(--primary-hue), 66%, 54%, 0.22);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+* { box-sizing: border-box; padding: 0; margin: 0; }
+
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+body { overflow-x: hidden; min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* ============================================================
+   Decorative clay blob backdrop
+   ============================================================ */
+.mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background-color: var(--background);
+}
+.mesh-bg::before,
+.mesh-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.mesh-bg::before {
+  width: 46vmax; height: 46vmax;
+  top: -14vmax; left: -10vmax;
+  background: radial-gradient(circle at 30% 30%,
+    hsla(var(--primary-hue), 72%, 60%, 0.55), transparent 70%);
+  animation: blobFloat 22s ease-in-out infinite;
+}
+.mesh-bg::after {
+  width: 42vmax; height: 42vmax;
+  bottom: -16vmax; right: -10vmax;
+  background: radial-gradient(circle at 70% 70%,
+    hsla(var(--secondary-hue), 66%, 60%, 0.5), transparent 70%);
+  animation: blobFloat 26s ease-in-out infinite reverse;
+}
+.dark .mesh-bg::before { opacity: 0.32; }
+.dark .mesh-bg::after  { opacity: 0.30; }
+
+/* ============================================================
+   Clay utility classes (usable from any module or markup)
+   ============================================================ */
+.clay {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-clay);
+  transition: var(--transition-clay);
+}
+.clay-sm   { box-shadow: var(--shadow-clay-sm); }
+.clay-inset{ box-shadow: var(--shadow-clay-inset); }
+
+/* Legacy alias — profile page & others use .glass-panel */
+.glass-panel {
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-clay);
+  transition: var(--transition-clay);
+}
+
+/* ============================================================
+   Focus ring
+   ============================================================ */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-glow);
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: hsla(var(--primary-hue), 70%, 45%, 0.22);
+  color: var(--foreground);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsla(var(--primary-hue), 28%, 58%, 0.4);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: hsla(var(--primary-hue), 45%, 50%, 0.6); background-clip: content-box; }
+html { scrollbar-width: thin; scrollbar-color: hsla(var(--primary-hue), 28%, 58%, 0.4) transparent; }
+
+/* ============================================================
+   Keyframes (legacy names kept + new clay motion)
+   ============================================================ */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scaleIn  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse    { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(6vmax, 4vmax) scale(1.08); }
+  66%      { transform: translate(-4vmax, 2vmax) scale(0.96); }
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.animate-slide-up { animation: fadeInUp 0.6s var(--ease-out) forwards; }
+.animate-scale-in { animation: scaleIn 0.5s var(--ease-out) forwards; }
+.animate-fade-in  { animation: fadeIn 0.8s ease forwards; }
+.animate-pulse    { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-float    { animation: floaty 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

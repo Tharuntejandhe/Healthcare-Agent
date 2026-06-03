@@ -1,0 +1,56 @@
+# Render Blueprint — MediHealth backend (FastAPI).
+# Frontend is deployed separately on Vercel; the database is managed Postgres on
+# Neon (set DATABASE_URL below to your Neon connection string).
+#
+# Deploy: push this repo to GitHub, then in Render → "New +" → "Blueprint" and
+# point it at the repo. Render reads this file and creates the service.
+#
+# NOTE on memory: local embeddings (fastembed) need ~1GB RAM. Use the "standard"
+# plan. On the free/512MB plan, set ENABLE_RAG=false (chat/vision/speech still
+# work; document-grounded RAG is disabled gracefully).
+
+services:
+  - type: web
+    name: medihealth-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: standard
+    region: oregon
+    healthCheckPath: /livez
+    autoDeploy: true
+    # Migrations run automatically in the container entrypoint (start.sh),
+    # so no separate pre-deploy step is required.
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: STORAGE_BACKEND
+        value: local
+      - key: DATA_DIR
+        value: /app/data
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "11520"
+      - key: ENABLE_RAG
+        value: "true"
+      # --- Secrets: set these in the Render dashboard (sync:false) ---
+      - key: SECRET_KEY
+        generateValue: true        # Render generates a strong value
+      - key: DATABASE_URL
+        sync: false                # Neon: postgresql://USER:PASS@HOST/DB?sslmode=require
+      - key: BACKEND_CORS_ORIGINS
+        sync: false                # e.g. https://your-app.vercel.app
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false                # optional (web search); leave blank to disable
+      - key: GOOGLE_CLIENT_ID
+        sync: false                # optional (Google sign-in)
+    # Persist uploads + FAISS index + model cache across deploys/restarts.
+    # (Without a disk, files are ephemeral — fine for a demo.)
+    disk:
+      name: medihealth-data
+      mountPath: /app/data
+      sizeGB: 1

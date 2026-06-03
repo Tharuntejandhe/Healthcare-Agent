@@ -1,0 +1,31 @@
+fastapi>=0.100.0
+uvicorn>=0.23.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+pydantic-settings>=2.0.0
+pydantic[email]>=2.0.0
+python-multipart>=0.0.6
+langchain-core>=0.1.0
+langchain-groq>=0.1.0
+langgraph>=0.0.10
+azure-storage-blob>=12.19.0
+faiss-cpu>=1.7.4
+langchain-community>=0.2.9      # CVE-2024-5998: FAISS pickle-deserialization RCE fixed in 0.2.9
+pypdf>=4.0.0
+pymupdf>=1.23.0
+mcp>=1.0.0
+langchain-mcp-adapters>=0.1.0
+python-dotenv>=1.0.0
+bcrypt>=4.0.0
+tavily-python>=0.3.0
+langchain-text-splitters>=0.0.1
+google-auth>=2.28.0
+alembic>=1.13.0
+
+# --- Production hardening ---
+gunicorn>=21.2.0          # multi-worker process manager (wraps uvicorn workers)
+slowapi>=0.1.9            # rate limiting
+fastembed>=0.3.0          # local ONNX embeddings (replaces random MockEmbeddings)
+httpx>=0.26.0             # explicit floor: groq client uses it for timeouts/retries
