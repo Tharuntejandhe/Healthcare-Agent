@@ -32,33 +32,33 @@ def senior_doctor_node(state: AgentState):
         logger.info("TAVILY_API_KEY missing/placeholder; skipping web search tool.")
 
     # 2. Load MCP Tools (Model Context Protocol) from our local Medical MCP server.
-    #    load happens over an async stdio session — this node is sync and runs in
-    #    a worker thread (no running event loop), so asyncio.run is safe here.
-    mcp_server_path = os.path.join(os.path.dirname(__file__), "..", "mcp_server.py")
-
-    try:
-        # Pass ONLY what the child needs — never the whole environment (which
-        # would leak every secret into the subprocess).
-        child_env = {
-            "PATH": os.environ.get("PATH", ""),
-            "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
-            "GROQ_API_KEY": settings.GROQ_API_KEY,
-            "TAVILY_API_KEY": settings.TAVILY_API_KEY,
-        }
-        mcp_client = MultiServerMCPClient(
-            {
-                "medical": {
-                    "transport": "stdio",
-                    "command": sys.executable,
-                    "args": [mcp_server_path],
-                    "env": child_env,
-                }
+    #    Skipped in production: the subprocess stdio transport is too slow for
+    #    resource-constrained hosting (Render free tier's 30s request timeout).
+    if not settings.is_production:
+        mcp_server_path = os.path.join(os.path.dirname(__file__), "..", "mcp_server.py")
+        try:
+            child_env = {
+                "PATH": os.environ.get("PATH", ""),
+                "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
+                "GROQ_API_KEY": settings.GROQ_API_KEY,
+                "TAVILY_API_KEY": settings.TAVILY_API_KEY,
             }
-        )
-        mcp_tools = asyncio.run(mcp_client.get_tools())
-        tools.extend(mcp_tools)
-    except Exception as e:
-        logger.warning("Failed to load MCP tools (continuing without them): %s", e)
+            mcp_client = MultiServerMCPClient(
+                {
+                    "medical": {
+                        "transport": "stdio",
+                        "command": sys.executable,
+                        "args": [mcp_server_path],
+                        "env": child_env,
+                    }
+                }
+            )
+            mcp_tools = asyncio.run(mcp_client.get_tools())
+            tools.extend(mcp_tools)
+        except Exception as e:
+            logger.warning("Failed to load MCP tools (continuing without them): %s", e)
+    else:
+        logger.info("Skipping MCP tools in production (subprocess too slow for hosting timeout)")
     
     # Bind all tools (Standard + MCP) to LLM
     llm_with_tools = llm.bind_tools(tools)

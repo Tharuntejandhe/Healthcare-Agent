@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     GROQ_WHISPER_MODEL: str = "whisper-large-v3-turbo"
-    GROQ_TIMEOUT_SECONDS: float = 60.0
+    GROQ_TIMEOUT_SECONDS: float = 25.0
     GROQ_MAX_RETRIES: int = 2
 
     # RAG / embeddings

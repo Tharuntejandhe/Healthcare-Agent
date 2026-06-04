@@ -24,6 +24,20 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    // In production, proxy /api/v1/* through Vercel to the backend.
+    // This completely eliminates CORS issues and avoids browser preflight overhead.
+    if (apiUrl && apiUrl !== "http://localhost:8000" && apiUrl !== "http://127.0.0.1:8000") {
+      return [
+        {
+          source: "/api/v1/:path*",
+          destination: `${apiUrl}/api/v1/:path*`,
+        },
+      ];
+    }
+    return [];
+  },
 };
 
 export default nextConfig;

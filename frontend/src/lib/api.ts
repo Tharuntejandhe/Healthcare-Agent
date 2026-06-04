@@ -1,4 +1,13 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// In production, use same-origin requests (empty string) — Vercel rewrites
+// proxy /api/v1/* to the backend, eliminating CORS entirely.
+// In development, hit the local backend directly.
+const isLocalDev =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+export const API_BASE_URL = isLocalDev
+  ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+  : '';
 
 export const getApiUrl = (path: string) => {
   // Ensure path starts with /
